@@ -1,0 +1,5 @@
+settings:
+  clusterName: mr-eks-prod-ap-south-1
+serviceAccount:
+  create: false
+  name: karpenter\n

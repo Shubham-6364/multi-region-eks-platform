@@ -1,0 +1,65 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**' # Assuming app source code is in src/
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Tag Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: mr-eks-frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./src
+          echo "Building docker image..."
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ steps.login-ecr.outputs.registry }}/mr-eks-frontend:${{ github.sha }}'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Push Image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: mr-eks-frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "Pushing docker image..."
+
+      - name: Update GitOps Manifests
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # sed -i "s/image: .*/image: <account-id>.dkr.ecr.ap-south-1.amazonaws.com\/mr-eks-frontend:$IMAGE_TAG/g" applications/frontend.yaml
+          # git config --global user.name 'GitHub Actions'
+          # git config --global user.email 'actions@github.com'
+          # git commit -am "Update frontend image to $IMAGE_TAG"
+          # git push
+          echo "Updating ArgoCD manifests..."\n

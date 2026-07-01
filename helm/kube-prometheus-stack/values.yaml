@@ -1,0 +1,13 @@
+grafana:
+  enabled: true
+  ingress:
+    enabled: true
+    ingressClassName: istio
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - grafana.k8s.codersdiary.online
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.k8s.codersdiary.online\n

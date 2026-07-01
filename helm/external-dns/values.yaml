@@ -1,0 +1,6 @@
+provider: aws
+domainFilters:
+  - k8s.codersdiary.online
+serviceAccount:
+  create: false
+  name: external-dns\n
